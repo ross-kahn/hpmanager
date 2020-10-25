@@ -6,6 +6,7 @@ export type Character = {
     items: Item[];
     health: Health;
     filename: string;
+    defenses: Defense[];
 }
 
 export type CharacterClass = {
@@ -35,7 +36,7 @@ export type Modifier = {
 }
 
 export type Defense = {
-    type: EDamageType;   // e.g. "fire"
+    "type": EDamageType;   // e.g. "fire"
     defense: EDefenseType // e.g. "resistance"
 }
 
@@ -44,14 +45,12 @@ export class Health
     constructor(maxHP: number)
     {
         this.temphp = 0;
-        this.tempmaxhp = 0;
         this.maxhp = maxHP;
         this.hitpoints = maxHP;
     }
     hitpoints: number;
     maxhp: number;
     temphp: number;
-    tempmaxhp: number;
 }
 
 

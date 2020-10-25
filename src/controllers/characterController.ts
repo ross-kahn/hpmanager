@@ -1,4 +1,4 @@
-import { Character, Health } from '../models/character'
+import { Character, CharacterClass, EDamageType, Health } from '../models/character'
 import fs from 'fs';
 import { join } from 'path';
 import { HealthManager } from './healthManager';
@@ -8,6 +8,10 @@ const DATA_DIR: string = "/src/data/";
 
 export class CharacterController
 {
+
+    // ********************************
+    //      Public functions
+    // *******************************
     /**
      * Will attempt to load the persistent data file for a character into a local Character object.
      * If the data file is not found, will attempt to load a character from the test data directory.
@@ -50,20 +54,45 @@ export class CharacterController
      * Retrieves character's health information if it exists, or calculates it based on character
      * information. Triggers a save to the database.
      * @param character Character object
+     * @param saveToFile By default this call will save to file. Pass false to skip that step.
      */
-    public GetCharacterHealth(character: Character): Health
+    public GetCharacterHealth(character: Character, saveToFile: boolean = true): Health
     {
         let charHealth: Health = HealthManager.GetCharacterHealth(character);
-        this.SaveCharacterData(character);
+        if (saveToFile) { this.SaveCharacterData(character); }
+
         return charHealth;
     }
 
+    public DamageCharacter(character: Character, dmgType: EDamageType, dmgAmount: number): void
+    {
+        if (!character.health) { this.GetCharacterHealth(character, false); }
+        HealthManager.DamageCharacter(character, dmgType, dmgAmount);
+        this.SaveCharacterData(character);
+    }
+
+    public HealCharacter(character: Character, healAmt: number): void
+    {
+        if (!character.health) { this.GetCharacterHealth(character, false); }
+        HealthManager.HealCharacter(character, healAmt);
+        this.SaveCharacterData(character);
+    }
+
+    public GiveTempHP(character: Character, tempHP: number)
+    {
+        if (!character.health) { this.GetCharacterHealth(character, false); }
+        HealthManager.GiveCharacterTempHP(character, tempHP);
+        this.SaveCharacterData(character);
+    }
 
 
-
-
-
-
+    // ********************************
+    //      Helper functions
+    // *******************************
+    /**
+     * 
+     * @param jsonStr 
+     */
     private __JSONtoCharacter(jsonStr: string): Character
     {
         let myChar: Character = JSON.parse(jsonStr, function (prop, value)

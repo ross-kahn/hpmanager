@@ -27,7 +27,7 @@ export class Routes
             {
                 let err: string = "ERROR: Character not found";
                 console.log(err);
-                return res.status(404).json({ message: err });
+                return res.status(404).send({ error: true, message: err });
             }
             req.characterObj = character;
             next();
@@ -40,7 +40,7 @@ export class Routes
             {
                 // Do stuff here
                 console.log("ERROR: Undefined damage type: " + dmgType);
-                return res.status(400).json({ message: "Error: Undefined damage type" });
+                return res.status(400).send({ error: true, message: "Error: Undefined damage type" });
             }
             req.damageType = <EDamageType>dmgType;
             next();
@@ -49,30 +49,36 @@ export class Routes
         app.param("amount", (req: Request, res: Response, next: NextFunction, amount: number) =>
         {
             console.log("Amount param detected: " + amount);
-            req.healthAmount = amount;
+            req.healthAmount = Number(amount);
             next();
         });
 
-        // Get full character data
+        /**
+         * See full character sheet
+         */
         app.get("/api/characters/:characterName", (req: Request, res: Response) =>
         {
             let character: Character = req.characterObj;
-            if (character) { res.status(200).json(JSON.stringify(character)); }
+            if (character) { res.status(200).send(character); }
         });
 
+
+        /**
+         * See health
+         */
         app.get("/api/characters/:characterName/health", (req: Request, res: Response) =>
         {
             let character: Character = req.characterObj;
             characterController.GetCharacterHealth(character);
-            if (character) { res.status(200).json(JSON.stringify(character.health)); }
+            if (character) { res.status(200).send(character.health); }
         });
 
+
+        /**
+         * Damage
+         */
         app.put("/api/damage/:characterName/type/:dmgType/amount/:amount", (req: Request, res: Response) =>
         {
-            console.log("\n---- Damage request ---");
-            console.log("Character name: " + req.characterObj?.name);
-            console.log("Dmg type: " + req.damageType);
-            console.log("Dmg amount: " + req.healthAmount);
             if (req.healthAmount < 0)
             {
                 let err: string = "ERROR: Damage cannot be negative. Use the heal api instead."
@@ -81,7 +87,38 @@ export class Routes
             }
 
             let character: Character = req.characterObj;
-            if (character) { res.status(200).json(JSON.stringify(character)); }
+            characterController.DamageCharacter(character, req.damageType, req.healthAmount);
+            return res.status(200).send(character);
+        });
+
+
+        app.put("/api/heal/:characterName/amount/:amount", (req: Request, res: Response) =>
+        {
+            if (req.healthAmount < 0)
+            {
+                let err: string = "ERROR: Healing cannot be negative. Use the damage api instead."
+                console.log(err);
+                return res.status(400).json({ message: err });
+            }
+
+            let character: Character = req.characterObj;
+            characterController.HealCharacter(character, req.healthAmount);
+            return res.status(200).send(character);
+        });
+
+
+        app.put("/api/temphp/:characterName/amount/:amount", (req: Request, res: Response) =>
+        {
+            if (req.healthAmount < 0)
+            {
+                let err: string = "ERROR: TempHP cannot be negative. Use the damage api instead."
+                console.log(err);
+                return res.status(400).json({ message: err });
+            }
+
+            let character: Character = req.characterObj;
+            characterController.GiveTempHP(character, req.healthAmount);
+            return res.status(200).send(character);
         });
 
 
