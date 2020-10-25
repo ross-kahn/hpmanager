@@ -16,7 +16,7 @@ export class Routes
         // Home page
         app.get("/", (req: Request, res: Response) =>
         {
-            res.sendFile(join(process.cwd(), "/src/views/index.html"));
+            res.redirect("/api/characters/briv/health");
         });
 
         app.param("characterName", (req: Request, res: Response, next: NextFunction, characterName: string) =>
