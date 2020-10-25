@@ -1,0 +1,30 @@
+{
+    "name": "Ross",
+    "level": 4,
+    "classes": [
+        {
+            "name": "monk",
+            "hitDiceValue": 8,
+            "classLevel": 4
+        }
+    ],
+    "stats": {
+        "strength": 15,
+        "dexterity": 12,
+        "constitution": 12,
+        "intelligence": 13,
+        "wisdom": 18,
+        "charisma": 8
+    },
+    "items": [
+        {
+            "name": "Ioun Stone of Fortitude",
+            "modifier": {
+                "affectedObject": "stats",
+                "affectedValue": "constitution",
+                "value": 2
+            }
+        }
+    ],
+    "defenses": []
+}

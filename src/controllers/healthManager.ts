@@ -1,23 +1,39 @@
-import { nextTick } from "process";
 import { Character, Health, EDamageType, Defense, EDefenseType } from "../models/character";
 
+/**
+ * Provides helper functions to calculate and manipulate the Health object of a Character
+ */
 export class HealthManager
 {
-    public static GetCharacterHealth(character: Character): Health
+    /**
+     * Will return the current Health object of a character. If the Health object doesn't
+     * exist, it will create one by calculating the max HP of the character.
+     * @param character Character object
+     */
+    public GetCharacterHealth(character: Character): Health
     {
         if (character?.health) { return character.health; }
         else
         {
-            let maxHP: number = HealthManager.__calculateMaxHP(character);
+            let maxHP: number = this.__calculateMaxHP(character);
             character.health = new Health(maxHP);
         }
     }
 
-    public static DamageCharacter(character: Character, dmgType: EDamageType, dmgAmnt: number): void
+    /**
+     * Manipulates the Health object of a character by lowering a character's hitpoints or
+     * temporary hitpoints. The Health object of a character must exist already before calling
+     * this function
+     * @param character Character object
+     * @param dmgType Type of damage, e.g. "slashing"
+     * @param dmgAmnt Amount of damage to attempt on the character
+     */
+    public DamageCharacter(character: Character, dmgType: EDamageType, dmgAmnt: number): void
     {
         if (!character?.health || !character.defenses) { return; }
 
         // In the future, this can easily be updated to also look for any 'defenses' attached to an item the character is holding
+        // Can also be updated to consider "weaknesses" as well as defenses
 
         let immunities: Defense[] = character.defenses.filter(def => (def.type == dmgType) && (def.defense == EDefenseType.Immunity));
         if (immunities.length > 0)
@@ -60,7 +76,12 @@ export class HealthManager
 
     }
 
-    public static HealCharacter(character: Character, healAmnt: number)
+    /**
+     * Adds hitpoints to a character. Will not add hitpoints past the characters allowed maximum.
+     * @param character Character object
+     * @param healAmnt Amount of hitpoints to attempt to heal the character with
+     */
+    public HealCharacter(character: Character, healAmnt: number)
     {
         if (!character?.health) { return; }
 
@@ -68,14 +89,19 @@ export class HealthManager
         let maxHP: number = character.health.maxhp;
 
         curHP += healAmnt;
-        if (curHP > maxHP) { curHP = maxHP; }
+        if (curHP > maxHP) { curHP = maxHP; }   // Don't add past maximum
 
         character.health.hitpoints = curHP;
         this.__logHealing(character, healAmnt);
     }
 
-
-    public static GiveCharacterTempHP(character: Character, tempHP: number)
+    /**
+     * Gives a character temporary hitpoints, as long as the character's current
+     * temporary hitpoints are lower than the new amount.
+     * @param character Character object
+     * @param tempHP Amount of temporary hitpoints to assign to the character
+     */
+    public GiveCharacterTempHP(character: Character, tempHP: number)
     {
         if (!character?.health) { return; }
 
@@ -100,15 +126,15 @@ export class HealthManager
      * instead of the average rounded-up roll.
      * @param character 
      */
-    private static __calculateMaxHP(character: Character)
+    private __calculateMaxHP(character: Character)
     {
         if (!character?.classes) { return 1; }
 
         let calculatedMaxHP: number = 0;
-        let conMod: number = HealthManager.__getModifier(character.stats?.constitution);
+        let conMod: number = this.__getModifier(character.stats?.constitution);
 
         // Calculate the class health for each class the character has levels in
-        character.classes.forEach(function (characterClass)
+        for (let characterClass of character.classes)
         {
             let isPrimaryClass: boolean = false;
             let classLevel: number = characterClass.classlevel;
@@ -126,12 +152,11 @@ export class HealthManager
             if (isPrimaryClass) { classLevel -= 1; }
 
             // Everything but first level adds the average hit die + con mod
-            let classHealth: number = (HealthManager.__getAverageRoll(hitDie) + conMod) * classLevel;
+            let classHealth: number = (this.__getAverageRoll(hitDie) + conMod) * classLevel;
             calculatedMaxHP += classHealth;
-        });
+        };
 
         return calculatedMaxHP;
-
     }
 
     /**
@@ -139,7 +164,7 @@ export class HealthManager
      * @param hitDice A die type's highest value (e.g. 6 for a d6 ). Must be >= 2
      * @returns The rounded up average of a hit die type
      */
-    private static __getAverageRoll(hitDice: number): number
+    private __getAverageRoll(hitDice: number): number
     {
         if (!hitDice || hitDice < 2) { return 1; }
 
@@ -149,12 +174,23 @@ export class HealthManager
         return average;
     }
 
-    private static __getModifier(abilityScore: number = 0): number
+    /**
+     * Helper function to determine the modifier of a character's ability (in the Stats object)
+     * @param abilityScore Raw ability score from the Stats object
+     */
+    private __getModifier(abilityScore: number = 0): number
     {
         return Math.floor((abilityScore - 10) / 2);
     }
 
-    private static __logDamage(character: Character, amount: number, dmgType: EDamageType, defense?: EDefenseType)
+    /**
+     * Prints a fun message to the console when a character gets damaged
+     * @param character 
+     * @param amount 
+     * @param dmgType 
+     * @param defense 
+     */
+    private __logDamage(character: Character, amount: number, dmgType: EDamageType, defense?: EDefenseType)
     {
         let extra: string = ".";
         switch (defense)
@@ -170,13 +206,24 @@ export class HealthManager
         console.log(character.name + " now has " + character.health.hitpoints + "/" + character.health.maxhp + " HP and " + character.health.temphp + " temporary HP.");
     }
 
-    private static __logHealing(character: Character, amount: number)
+    /**
+     * Prints a fun message to the console when a character is healed
+     * @param character 
+     * @param amount 
+     */
+    private __logHealing(character: Character, amount: number)
     {
         console.log("\n" + character.name + " was healed by " + amount + " points!");
         console.log(character.name + " now has " + character.health.hitpoints + "/" + character.health.maxhp + " HP and " + character.health.temphp + " temporary HP.");
     }
 
-    private static __logTempHP(character: Character, tempHP: number, replaced: boolean)
+    /**
+     * Prints a fun message to the console when a character gets temporary hitpoints
+     * @param character 
+     * @param tempHP 
+     * @param replaced 
+     */
+    private __logTempHP(character: Character, tempHP: number, replaced: boolean)
     {
         if (replaced)
         {

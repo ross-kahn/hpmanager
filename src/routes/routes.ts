@@ -1,7 +1,7 @@
 /**
  * Defines routes, calls into appropriate behavior files
  */
-import { CharacterController } from "../controllers/characterController";
+import { ICharacterController } from "../controllers/characterController";
 import { Application, NextFunction, Request, Response } from "express";
 import { join } from 'path';
 import { Character, EDamageType } from "../models/character";
@@ -11,7 +11,7 @@ import { Character, EDamageType } from "../models/character";
  */
 export class Routes
 {
-    public route(app: Application, characterController: CharacterController)
+    public route(app: Application, characterController: ICharacterController)
     {
         // Home page
         app.get("/", (req: Request, res: Response) =>
@@ -22,7 +22,7 @@ export class Routes
         app.param("characterName", (req: Request, res: Response, next: NextFunction, characterName: string) =>
         {
             console.log("Character name param detected: " + characterName);
-            let character: Character = characterController.LoadCharacterFromFile(req.params.characterName);
+            let character: Character = characterController.LoadCharacterFromDatabase(req.params.characterName);
             if (!character)
             {
                 let err: string = "ERROR: Character not found";
@@ -62,6 +62,16 @@ export class Routes
             if (character) { res.status(200).send(character); }
         });
 
+        app.post("/api/characters/create/:newCharacterID", (req: Request, res: Response) =>
+        {
+            let newChar: Character = characterController.CreateNewCharacter(req.params.newCharacterID, JSON.stringify(req.body));
+            if (newChar) { res.status(201).send(newChar); }
+            else
+            {
+                res.status(400).send({ error: true, message: "Could not create new character" });
+            }
+        });
+
 
         /**
          * See health
@@ -69,7 +79,7 @@ export class Routes
         app.get("/api/characters/:characterName/health", (req: Request, res: Response) =>
         {
             let character: Character = req.characterObj;
-            characterController.GetCharacterHealth(character);
+            characterController.GetCharacterHealth(character, true);
             if (character) { res.status(200).send(character.health); }
         });
 

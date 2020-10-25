@@ -1,16 +1,16 @@
 /**
- * Hooks up the database and establishes routes
+ * Hooks up the character controller and establishes routes
  */
 import express from "express";
 import bodyParser from "body-parser";
 import { Routes } from "../routes/routes";
-import { CharacterController } from "../controllers/characterController";
+import { JSONCharacterController, ICharacterController } from "../controllers/characterController";
 
 class App
 {
     public app: express.Application;
     private routes: Routes = new Routes();
-    private characters: CharacterController = new CharacterController();
+    private characters: ICharacterController = new JSONCharacterController();
 
     constructor()
     {
