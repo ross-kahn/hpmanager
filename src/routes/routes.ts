@@ -2,11 +2,13 @@
  * Defines routes, calls into appropriate behavior files
  */
 import { CharacterController } from "../controllers/characterController";
-import { Application, request, Request, Response } from "express";
-import bodyParser from "body-parser";
+import { Application, NextFunction, Request, Response } from "express";
 import { join } from 'path';
-import { Character } from "../models/character";
+import { Character, EDamageType } from "../models/character";
 
+/**
+ * 
+ */
 export class Routes
 {
     public route(app: Application, characterController: CharacterController)
@@ -17,27 +19,69 @@ export class Routes
             res.sendFile(join(process.cwd(), "/src/views/index.html"));
         });
 
+        app.param("characterName", (req: Request, res: Response, next: NextFunction, characterName: string) =>
+        {
+            console.log("Character name param detected: " + characterName);
+            let character: Character = characterController.LoadCharacterFromFile(req.params.characterName);
+            if (!character)
+            {
+                let err: string = "ERROR: Character not found";
+                console.log(err);
+                return res.status(404).json({ message: err });
+            }
+            req.characterObj = character;
+            next();
+        });
+
+        app.param("dmgType", (req: Request, res: Response, next: NextFunction, dmgType: string) =>
+        {
+            console.log("Damage type param detected: " + dmgType);
+            if (!(<any>Object).values(EDamageType).includes(dmgType))
+            {
+                // Do stuff here
+                console.log("ERROR: Undefined damage type: " + dmgType);
+                return res.status(400).json({ message: "Error: Undefined damage type" });
+            }
+            req.damageType = <EDamageType>dmgType;
+            next();
+        });
+
+        app.param("amount", (req: Request, res: Response, next: NextFunction, amount: number) =>
+        {
+            console.log("Amount param detected: " + amount);
+            req.healthAmount = amount;
+            next();
+        });
+
         // Get full character data
-        app.get("/api/character/:characterName", (req: Request, res: Response) =>
+        app.get("/api/characters/:characterName", (req: Request, res: Response) =>
         {
-            let character: Character = characterController.LoadCharacterData(req.params.characterName);
+            let character: Character = req.characterObj;
             if (character) { res.status(200).json(JSON.stringify(character)); }
-            else { res.status(404).json({ message: "Chracter not found" }); }
         });
 
-        app.get("/api/character/:characterName", (req: Request, res: Response) =>
+        app.get("/api/characters/:characterName/health", (req: Request, res: Response) =>
         {
-            let character: Character = characterController.LoadCharacterData(req.params.characterName);
-            if (character) { res.status(200).json(JSON.stringify(character)); }
-            else { res.status(404).json({ message: "Chracter not found" }); }
-        });
-
-        app.get("/api/character/:characterName/health", (req: Request, res: Response) =>
-        {
-            let character: Character = characterController.LoadCharacterData(req.params.characterName);
+            let character: Character = req.characterObj;
             characterController.GetCharacterHealth(character);
             if (character) { res.status(200).json(JSON.stringify(character.health)); }
-            else { res.status(404).json({ message: "Chracter not found" }); }
+        });
+
+        app.put("/api/damage/:characterName/type/:dmgType/amount/:amount", (req: Request, res: Response) =>
+        {
+            console.log("\n---- Damage request ---");
+            console.log("Character name: " + req.characterObj?.name);
+            console.log("Dmg type: " + req.damageType);
+            console.log("Dmg amount: " + req.healthAmount);
+            if (req.healthAmount < 0)
+            {
+                let err: string = "ERROR: Damage cannot be negative. Use the heal api instead."
+                console.log(err);
+                return res.status(400).json({ message: err });
+            }
+
+            let character: Character = req.characterObj;
+            if (character) { res.status(200).json(JSON.stringify(character)); }
         });
 
 
@@ -47,5 +91,21 @@ export class Routes
             res.status(404).send({ error: true, message: 'Check your URL please' });
         });
 
+    }
+}
+
+declare global
+{
+    namespace Express
+    {
+        /**
+         * This will allow us to use the app.param structure in a type safe way
+         */
+        export interface Request
+        {
+            characterObj: Character;
+            damageType?: EDamageType;
+            healthAmount: number;
+        }
     }
 }

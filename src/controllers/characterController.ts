@@ -11,35 +11,46 @@ export class CharacterController
     /**
      * Will attempt to load the persistent data file for a character into a local Character object.
      * If the data file is not found, will attempt to load a character from the test data directory.
-     * @param characterID filename 
+     * @param filename The filename to load without any path or extension 
      */
-    public LoadCharacterData(characterID: string): Character
+    public LoadCharacterFromFile(filename: string): Character
     {
-        let filename: string;
+        let path: string;
         let newfile: boolean = false;
-        if (fs.existsSync(join(this.__getDataDir(), characterID + ".json")))
+        if (fs.existsSync(join(this.__getDataDir(), filename + ".json")))
         {
-            filename = join(this.__getDataDir(), characterID + ".json");
+            console.log("Loading existing character...");
+            path = join(this.__getDataDir(), filename + ".json");
         }
-        else if (fs.existsSync(join(this.__getTestDir(), characterID + ".json")))
+        else if (fs.existsSync(join(this.__getTestDir(), filename + ".json")))
         {
-            filename = join(this.__getTestDir(), characterID + ".json");
+            console.log("Loading new test character...");
+            path = join(this.__getTestDir(), filename + ".json");
             newfile = true;
         }
-        if (!filename) { return null; }
+        if (!path) { return null; }
 
-        const rawData: string = fs.readFileSync(filename, "utf8");
+        const rawData: string = fs.readFileSync(path, "utf8");
         let myChar: Character = this.__JSONtoCharacter(rawData);
-        myChar.filename = characterID;
+        myChar.filename = filename;
         if (newfile) { this.SaveCharacterData(myChar); } // If loading from test directory, save down a persistent copy
         return myChar;
     }
 
+    /**
+     * Saves a character into a JSON file in the main data directory, with any current data
+     * @param character Character object
+     */
     public SaveCharacterData(character: Character)
     {
         fs.writeFile(this.__getCharacterFilename(character), JSON.stringify(character), () => { });
     }
 
+    /**
+     * Retrieves character's health information if it exists, or calculates it based on character
+     * information. Triggers a save to the database.
+     * @param character Character object
+     */
     public GetCharacterHealth(character: Character): Health
     {
         let charHealth: Health = HealthManager.GetCharacterHealth(character);
