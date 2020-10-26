@@ -1,17 +1,17 @@
 /**
  * Defines routes, calls into appropriate behavior files
  */
-import { ICharacterController } from "../controllers/characterController";
+import { CharacterController } from "../controllers/characterController";
 import { Application, NextFunction, Request, Response } from "express";
 import { join } from 'path';
 import { Character, EDamageType } from "../models/character";
 
 /**
- * 
+ * Application routes
  */
 export class Routes
 {
-    public route(app: Application, characterController: ICharacterController)
+    public route(app: Application, characterController: CharacterController)
     {
         // Home page readme
         app.get("/", (req: Request, res: Response) =>
@@ -135,6 +135,18 @@ export class Routes
             let character: Character = req.characterObj;
             characterController.GiveTempHP(character, req.healthAmount);
             return res.status(200).send(character);
+        });
+
+
+        app.get("/api/test", (req: Request, res: Response) =>
+        {
+            if (characterController.TestCharacter())
+            {
+                return res.status(200);
+            } else
+            {
+                return res.status(400);
+            }
         });
 
 

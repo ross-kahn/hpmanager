@@ -1,99 +1,52 @@
-import { Character, EDamageType, Health } from '../models/character'
-import fs from 'fs';
-import { join } from 'path';
+import { ICharacterDBConnector } from 'db/connection';
+import { Character, CharacterClass, EDamageType, Health } from '../models/character';
 import { HealthManager } from './healthManager';
-import { json, raw } from 'body-parser';
-
-const TEST_DIR: string = "/src/data/test/";
-const DATA_DIR: string = "/src/data/";
 
 /**
- * Implements the interface between the database, the router, and the health manager
+ * Controller between the database, the character manipulation behavior APIs, and the router
  */
-export interface ICharacterController
-{
-    LoadCharacterFromDatabase(id: string): Character;
-    SaveCharacterData(character: Character): void;
-    GetCharacterHealth(character: Character, saveToFile: boolean): Health;
-    DamageCharacter(character: Character, dmgType: EDamageType, dmgAmount: number): void;
-    HealCharacter(character: Character, healAmt: number): void;
-    GiveTempHP(character: Character, tempHP: number): void;
-    CreateNewCharacter(id: string, rawData: string): Character
-}
-
-
-/**
- * Interfaces with the database (in this case just local JSON files), the router, and the 
- * health manager. 
- */
-export class JSONCharacterController implements ICharacterController
+export class CharacterController
 {
 
     // Provides helper functions to manipulate and use the Health properties on Character objects
     private __healthManager: HealthManager;
+    private __dbConnection: ICharacterDBConnector;
 
-    constructor()
+    constructor(dbConnection: ICharacterDBConnector)
     {
         this.__healthManager = new HealthManager();
+        this.__dbConnection = dbConnection;
     }
 
     // ********************************
     //      Public functions
     // *******************************
-    /**
-     * Will attempt to load the persistent data file for a character into a local Character object.
-     * If the data file is not found, will attempt to load a character from the test data directory.
-     * @param id The filename to load without any path or extension 
-     */
     public LoadCharacterFromDatabase(id: string): Character
     {
-        let path: string;
-        let newfile: boolean = false;
-        if (fs.existsSync(join(this.__getDataDir(), id + ".json")))
-        {
-            path = join(this.__getDataDir(), id + ".json");
-        }
-        else if (fs.existsSync(join(this.__getTestDir(), id + ".json")))
-        {
-            path = join(this.__getTestDir(), id + ".json");
-            newfile = true;
-        }
-        if (!path) { return null; }
-
-        const rawData: string = fs.readFileSync(path, "utf8");
-        let myChar: Character = this.__JSONtoCharacter(rawData);
+        let myChar: Character = this.__dbConnection.LoadCharacterFromDatabase(id);
         if (myChar)
         {
             myChar.filename = id;
-            this.GetCharacterHealth(myChar, false);  // This will initialize the character health and save it to the file
+            this.GetCharacterHealth(myChar);  // This will initialize the character health and save it to the file
         }
         return myChar;
     }
 
     /**
-     * Creates a new character and saves it to a JSON file
+     * Creates a new character from JSON data and saves it using whatever DB connection
      * @param id Filename of the file to write
-     * @param rawData JSON character string
+     * @param rawData Character data string
      */
     public CreateNewCharacter(id: string, rawData: string): Character
     {
-        let myChar: Character = this.__JSONtoCharacter(rawData);
+        let myChar: Character = this.__dbConnection.ParseCharacterData(rawData);
         if (myChar)
         {
             myChar.filename = id;
-            this.GetCharacterHealth(myChar, true);// Initialize health
-            this.SaveCharacterData(myChar);
+            this.GetCharacterHealth(myChar);// Initialize health
+            this.__dbConnection.SaveCharacterData(myChar);
         }
         return myChar;
-    }
-
-    /**
-     * Saves a character into a JSON file in the main data directory, with any current data
-     * @param character Character object
-     */
-    public SaveCharacterData(character: Character): void
-    {
-        fs.writeFile(this.__getCharacterFilename(character), JSON.stringify(character), () => { });
     }
 
     /**
@@ -102,7 +55,7 @@ export class JSONCharacterController implements ICharacterController
      * @param character Character object
      * @param saveToFile If true, this call will save to file. Pass false to skip that step.
      */
-    public GetCharacterHealth(character: Character, saveToFile: boolean): Health
+    public GetCharacterHealth(character: Character): Health
     {
         let charHealth: Health = this.__healthManager.GetCharacterHealth(character);
         return charHealth;
@@ -116,9 +69,9 @@ export class JSONCharacterController implements ICharacterController
      */
     public DamageCharacter(character: Character, dmgType: EDamageType, dmgAmount: number): void
     {
-        if (!character.health) { this.GetCharacterHealth(character, false); }
+        if (!character.health) { this.GetCharacterHealth(character); }
         this.__healthManager.DamageCharacter(character, dmgType, dmgAmount);
-        this.SaveCharacterData(character);
+        this.__dbConnection.SaveCharacterData(character);
     }
 
     /**
@@ -128,9 +81,9 @@ export class JSONCharacterController implements ICharacterController
      */
     public HealCharacter(character: Character, healAmt: number): void
     {
-        if (!character.health) { this.GetCharacterHealth(character, false); }
+        if (!character.health) { this.GetCharacterHealth(character); }
         this.__healthManager.HealCharacter(character, healAmt);
-        this.SaveCharacterData(character);
+        this.__dbConnection.SaveCharacterData(character);
     }
 
     /**
@@ -142,72 +95,111 @@ export class JSONCharacterController implements ICharacterController
      */
     public GiveTempHP(character: Character, tempHP: number)
     {
-        if (!character.health) { this.GetCharacterHealth(character, false); }
+        if (!character.health) { this.GetCharacterHealth(character); }
         this.__healthManager.GiveCharacterTempHP(character, tempHP);
-        this.SaveCharacterData(character);
+        this.__dbConnection.SaveCharacterData(character);
     }
 
 
-    // ********************************
-    //      Helper functions
-    // *******************************
     /**
-     * Parses a JSON string into a Character object
-     * @param jsonStr Raw character data in a JSON string
-     * @returns A Character object
+     * Internal basic testing tool. In production we'd use a unit test suite
+     * This will run Briv (actually, Briv's clone 'Testbriv') through a set of hard-coded tests
      */
-    private __JSONtoCharacter(jsonStr: string): Character
+    public TestCharacter(): boolean
     {
-        let myChar: Character;
-        try
+        console.log("\nStarting test suite...");
+        let _briv: Character = this.LoadCharacterFromDatabase("briv");
+        if (!_briv || !_briv.health) { return this.__testFailure(_briv, "(1) Test failed at load"); }
+
+        this.CreateNewCharacter("testbriv", JSON.stringify(_briv));
+        _briv = this.LoadCharacterFromDatabase("testbriv");
+        if (!_briv || !_briv.health) { return this.__testFailure(_briv, "(2) Test failed at character creation / saving"); }
+
+        _briv.name = "Testbriv";
+
+        let health: Health = _briv.health;
+        if (health.hitpoints != 45 || health.maxhp != 45 || health.temphp != 0)
         {
-            myChar = JSON.parse(jsonStr, function (prop, value)
-            {
-                // Force property names to lowercase
-                var lower = prop.toLowerCase();
-                if (prop === lower) return value;
-                else this[lower] = value;
-            });
-        } catch (e)
-        {
-            console.log("\nThere was an error when parsing the JSON");
-            console.log(jsonStr);
+            return this.__testFailure(_briv, "(3) Test failed at HP calculation.");
         }
-        return myChar;
-    }
 
-    /**
-     * Returns the directory for persistent character data
-     */
-    private __getDataDir(): string
-    {
-        return join(process.cwd(), DATA_DIR);
-    }
-
-    /**
-     * Returns the directory for test data
-     */
-    private __getTestDir(): string
-    {
-        return process.cwd() + TEST_DIR;
-    }
-
-    /**
-     * Determines the filename for saving to persistent character data. Will try
-     * to use the character's name
-     * @param character Character object
-     */
-    private __getCharacterFilename(character: Character): string
-    {
-        let filename = character?.filename;
-        if (!filename && character?.name)
+        this.GiveTempHP(_briv, 10);
+        health = _briv.health;
+        if (health.hitpoints != 45 || health.maxhp != 45 || health.temphp != 10)
         {
-            filename = character.name.toLowerCase().split(" ").join("_");
-
+            return this.__testFailure(_briv, "(4) Test failed at gaining temp hitpoints");
         }
-        if (!filename) { filename = "unnamed_character"; }
 
-        return process.cwd() + DATA_DIR + filename + ".json";
+        this.GiveTempHP(_briv, 5);
+        health = _briv.health;
+        if (health.hitpoints != 45 || health.maxhp != 45 || health.temphp != 10)
+        {
+            return this.__testFailure(_briv, "(4a) Test failed at choosing higher temp HP value");
+        }
+
+        this.DamageCharacter(_briv, EDamageType.Acid, 5);
+        health = _briv.health;
+        if (health.hitpoints != 45 || health.maxhp != 45 || health.temphp != 5)
+        {
+            return this.__testFailure(_briv, "(5) Test failed at damaging temp HP");
+        }
+
+        this.DamageCharacter(_briv, EDamageType.Fire, 5);
+        health = _briv.health;
+        if (health.hitpoints != 45 || health.maxhp != 45 || health.temphp != 5)
+        {
+            return this.__testFailure(_briv, "(6) Test failed at damaging with immunity");
+        }
+
+        this.DamageCharacter(_briv, EDamageType.Slashing, 9);
+        health = _briv.health;
+        if (health.hitpoints != 45 || health.maxhp != 45 || health.temphp != 1)
+        {
+            return this.__testFailure(_briv, "(7) Test failed at damaging with resistance (rounding down)");
+        }
+
+        this.DamageCharacter(_briv, EDamageType.Bludgeoning, 11);
+        health = _briv.health;
+        if (health.hitpoints != 35 || health.maxhp != 45 || health.temphp != 0)
+        {
+            return this.__testFailure(_briv, "(8) Test failed at damaging both temp HP and normal HP");
+        }
+
+        this.HealCharacter(_briv, 5);
+        health = _briv.health;
+        if (health.hitpoints != 40 || health.maxhp != 45 || health.temphp != 0)
+        {
+            return this.__testFailure(_briv, "(9) Test failed at healing");
+        }
+
+        this.HealCharacter(_briv, 10);
+        health = _briv.health;
+        if (health.hitpoints != 45 || health.maxhp != 45 || health.temphp != 0)
+        {
+            return this.__testFailure(_briv, "(10) Test failed at healing above maximum");
+        }
+
+        this.DamageCharacter(_briv, EDamageType.Lightning, 55);
+        health = _briv.health;
+        if (health.hitpoints != -10 || health.maxhp != 45 || health.temphp != 0)
+        {
+            return this.__testFailure(_briv, "(11) Test failed at damaging below 0");
+        }
+
+        return this.__testSuccess("\nTestbriv is damaged but he passed the test! Huzzah!");
+    }
+
+    private __testFailure(testBriv: Character, message: string): boolean
+    {
+        console.log(message);
+        console.log(testBriv);
+        return false;
+    }
+
+    private __testSuccess(message: string): boolean
+    {
+        console.log(message);
+        return true;
     }
 
 }

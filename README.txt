@@ -66,3 +66,38 @@ If you want to clear out the application's persistent data, open up the docker C
 	/usr/src/app/src/data # rm ross.json
 
 
+I set up a test which clones Briv and does a bunch of tests on him, viewable from the console:
+	GET http://localhost:3000/api/test
+	
+	The console output will look like this:
+	> Starting test suite...
+
+	> Testbriv now has 10 temporary HP!
+	> Testbriv has 45/45 HP and 10 temporary HP.
+
+	> Testbriv already has 10 temporary hitpoints, so getting 5 temporary HP does nothing.
+	> Testbriv has 45/45 HP and 10 temporary HP.
+
+	> Testbriv took 5 points of acid damage.
+	> Testbriv now has 45/45 HP and 5 temporary HP.
+
+	> Testbriv took 5 points of fire damage, but has immunity!
+	> Testbriv now has 45/45 HP and 5 temporary HP.
+
+	> Testbriv took 9 points of slashing damage, but is resistant!
+	> Testbriv now has 45/45 HP and 1 temporary HP.
+
+	> Testbriv took 11 points of bludgeoning damage.
+	> Testbriv now has 35/45 HP and 0 temporary HP.
+
+	> Testbriv was healed by 5 points!
+	> Testbriv now has 40/45 HP and 0 temporary HP.
+
+	> Testbriv was healed by 10 points!
+	> Testbriv now has 45/45 HP and 0 temporary HP.
+
+	> Testbriv took 55 points of lightning damage.
+	> Testbriv now has -10/45 HP and 0 temporary HP.
+	> Testbriv is damaged but he passed the test! Huzzah!
+
+

@@ -4,25 +4,32 @@
 import express from "express";
 import bodyParser from "body-parser";
 import { Routes } from "../routes/routes";
-import { JSONCharacterController, ICharacterController } from "../controllers/characterController";
+import { CharacterController } from "../controllers/characterController";
+import { ICharacterDBConnector, JSONCharacterConnector } from "../db/connection";
 
 class App
 {
     public app: express.Application;
-    private routes: Routes = new Routes();
-    private characters: ICharacterController = new JSONCharacterController();
+    private _routes: Routes = new Routes();
+    private _dbConnection: ICharacterDBConnector;
+    private _characters: CharacterController;
 
     constructor()
     {
         this.app = express();
         this.__init();
-        this.routes.route(this.app, this.characters);
+
+        this._routes.route(this.app, this._characters);
     }
 
     private __init(): void
     {
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({ extended: false }));
+
+        // Initialize the database and the controllers
+        this._dbConnection = new JSONCharacterConnector();
+        this._characters = new CharacterController(this._dbConnection);
     }
 
 }
