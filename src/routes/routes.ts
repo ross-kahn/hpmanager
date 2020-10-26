@@ -142,10 +142,10 @@ export class Routes
         {
             if (characterController.TestCharacter())
             {
-                return res.status(200);
+                return res.status(200).json({ message: "Tests ran successfully!" });
             } else
             {
-                return res.status(400);
+                return res.status(400).json({ error: true, message: "Tests failed" });
             }
         });
 
