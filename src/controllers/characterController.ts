@@ -1,7 +1,8 @@
-import { Character, CharacterClass, EDamageType, Health } from '../models/character'
+import { Character, EDamageType, Health } from '../models/character'
 import fs from 'fs';
 import { join } from 'path';
 import { HealthManager } from './healthManager';
+import { json, raw } from 'body-parser';
 
 const TEST_DIR: string = "/src/data/test/";
 const DATA_DIR: string = "/src/data/";
@@ -50,12 +51,10 @@ export class JSONCharacterController implements ICharacterController
         let newfile: boolean = false;
         if (fs.existsSync(join(this.__getDataDir(), id + ".json")))
         {
-            console.log("Loading existing character...");
             path = join(this.__getDataDir(), id + ".json");
         }
         else if (fs.existsSync(join(this.__getTestDir(), id + ".json")))
         {
-            console.log("Loading new test character...");
             path = join(this.__getTestDir(), id + ".json");
             newfile = true;
         }
@@ -63,8 +62,11 @@ export class JSONCharacterController implements ICharacterController
 
         const rawData: string = fs.readFileSync(path, "utf8");
         let myChar: Character = this.__JSONtoCharacter(rawData);
-        myChar.filename = id;
-        if (newfile) { this.SaveCharacterData(myChar); } // If loading from test directory, save down a persistent copy
+        if (myChar)
+        {
+            myChar.filename = id;
+            this.GetCharacterHealth(myChar, false);  // This will initialize the character health and save it to the file
+        }
         return myChar;
     }
 
@@ -76,7 +78,12 @@ export class JSONCharacterController implements ICharacterController
     public CreateNewCharacter(id: string, rawData: string): Character
     {
         let myChar: Character = this.__JSONtoCharacter(rawData);
-        this.SaveCharacterData(myChar);
+        if (myChar)
+        {
+            myChar.filename = id;
+            this.GetCharacterHealth(myChar, true);// Initialize health
+            this.SaveCharacterData(myChar);
+        }
         return myChar;
     }
 
@@ -98,8 +105,6 @@ export class JSONCharacterController implements ICharacterController
     public GetCharacterHealth(character: Character, saveToFile: boolean): Health
     {
         let charHealth: Health = this.__healthManager.GetCharacterHealth(character);
-        if (saveToFile) { this.SaveCharacterData(character); }
-
         return charHealth;
     }
 
@@ -153,13 +158,21 @@ export class JSONCharacterController implements ICharacterController
      */
     private __JSONtoCharacter(jsonStr: string): Character
     {
-        let myChar: Character = JSON.parse(jsonStr, function (prop, value)
+        let myChar: Character;
+        try
         {
-            // Force property names to lowercase
-            var lower = prop.toLowerCase();
-            if (prop === lower) return value;
-            else this[lower] = value;
-        });
+            myChar = JSON.parse(jsonStr, function (prop, value)
+            {
+                // Force property names to lowercase
+                var lower = prop.toLowerCase();
+                if (prop === lower) return value;
+                else this[lower] = value;
+            });
+        } catch (e)
+        {
+            console.log("\nThere was an error when parsing the JSON");
+            console.log(jsonStr);
+        }
         return myChar;
     }
 

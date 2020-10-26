@@ -13,15 +13,17 @@ export class Routes
 {
     public route(app: Application, characterController: ICharacterController)
     {
-        // Home page
+        // Home page readme
         app.get("/", (req: Request, res: Response) =>
         {
-            res.redirect("/api/characters/briv/health");
+            res.status(200).sendFile(join(process.cwd(), "README.txt"));
         });
 
+        // ***************************************
+        // Parameter validations
+        // ***************************************
         app.param("characterName", (req: Request, res: Response, next: NextFunction, characterName: string) =>
         {
-            console.log("Character name param detected: " + characterName);
             let character: Character = characterController.LoadCharacterFromDatabase(req.params.characterName);
             if (!character)
             {
@@ -35,7 +37,6 @@ export class Routes
 
         app.param("dmgType", (req: Request, res: Response, next: NextFunction, dmgType: string) =>
         {
-            console.log("Damage type param detected: " + dmgType);
             if (!(<any>Object).values(EDamageType).includes(dmgType))
             {
                 // Do stuff here
@@ -48,11 +49,14 @@ export class Routes
 
         app.param("amount", (req: Request, res: Response, next: NextFunction, amount: number) =>
         {
-            console.log("Amount param detected: " + amount);
             req.healthAmount = Number(amount);
             next();
         });
 
+
+        // ***************************************
+        // Routes
+        // ***************************************
         /**
          * See full character sheet
          */
@@ -62,10 +66,18 @@ export class Routes
             if (character) { res.status(200).send(character); }
         });
 
+        /**
+         * Create a new character on the database with JSON
+         */
         app.post("/api/characters/create/:newCharacterID", (req: Request, res: Response) =>
         {
             let newChar: Character = characterController.CreateNewCharacter(req.params.newCharacterID, JSON.stringify(req.body));
-            if (newChar) { res.status(201).send(newChar); }
+            if (newChar)
+            {
+                console.log("\nNew character created: " + newChar.name);
+                console.log(newChar);
+                res.status(201).send(newChar);
+            }
             else
             {
                 res.status(400).send({ error: true, message: "Could not create new character" });
@@ -74,18 +86,7 @@ export class Routes
 
 
         /**
-         * See health
-         */
-        app.get("/api/characters/:characterName/health", (req: Request, res: Response) =>
-        {
-            let character: Character = req.characterObj;
-            characterController.GetCharacterHealth(character, true);
-            if (character) { res.status(200).send(character.health); }
-        });
-
-
-        /**
-         * Damage
+         * Damage a character
          */
         app.put("/api/damage/:characterName/type/:dmgType/amount/:amount", (req: Request, res: Response) =>
         {
@@ -101,7 +102,9 @@ export class Routes
             return res.status(200).send(character);
         });
 
-
+        /**
+         * Heal a character
+         */
         app.put("/api/heal/:characterName/amount/:amount", (req: Request, res: Response) =>
         {
             if (req.healthAmount < 0)
@@ -117,6 +120,9 @@ export class Routes
         });
 
 
+        /**
+         * Put temporary HP on a character
+         */
         app.put("/api/temphp/:characterName/amount/:amount", (req: Request, res: Response) =>
         {
             if (req.healthAmount < 0)

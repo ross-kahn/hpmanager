@@ -1,4 +1,4 @@
-import { Character, Health, EDamageType, Defense, EDefenseType } from "../models/character";
+import { Character, Health, EDamageType, Defense, EDefenseType, EAbilities, Item } from "../models/character";
 
 /**
  * Provides helper functions to calculate and manipulate the Health object of a Character
@@ -30,7 +30,11 @@ export class HealthManager
      */
     public DamageCharacter(character: Character, dmgType: EDamageType, dmgAmnt: number): void
     {
-        if (!character?.health || !character.defenses) { return; }
+        if (!character?.health || !character.defenses)
+        {
+            console.log("ERROR: Could not calculate damage due to incorrect character formatting.")
+            return;
+        }
 
         // In the future, this can easily be updated to also look for any 'defenses' attached to an item the character is holding
         // Can also be updated to consider "weaknesses" as well as defenses
@@ -131,7 +135,8 @@ export class HealthManager
         if (!character?.classes) { return 1; }
 
         let calculatedMaxHP: number = 0;
-        let conMod: number = this.__getModifier(character.stats?.constitution);
+        let conScore: number = this.__getAbilityScore(character, EAbilities.Constitution);
+        let conMod: number = this.__getModifier(conScore);
 
         // Calculate the class health for each class the character has levels in
         for (let characterClass of character.classes)
@@ -157,6 +162,39 @@ export class HealthManager
         };
 
         return calculatedMaxHP;
+    }
+
+    /**
+     * Gets a character's ability score from the Stats object, taking into account any items
+     * the character is holding which would boost an ability
+     * @param character Character object
+     * @param ability Ability score to get the value of
+     */
+    __getAbilityScore(character: Character, ability: EAbilities): number
+    {
+        if (!character?.stats || !(ability in character.stats))
+        {
+            return 0;   // You're gonna have a real bad ability score if the character isn't formatted correctly
+        }
+
+        let baseAbility: number = Number(character.stats[ability]); // e.g. Constitution score
+        if (!character.items) { return baseAbility; }
+
+        // Find any items that might boost the chosen ability, and add it to the base ability score
+        let items: Item[] = character.items.filter(itm => (itm.modifier?.affectedobject &&
+            itm.modifier.affectedvalue &&
+            itm.modifier.affectedobject == "stats" &&
+            itm.modifier.affectedvalue == ability));
+
+        for (let item of items)
+        {
+            if (item.modifier.value)
+            {
+                baseAbility += Number(item.modifier.value);
+            }
+        }
+
+        return baseAbility;
     }
 
     /**
