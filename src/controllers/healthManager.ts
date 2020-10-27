@@ -15,7 +15,8 @@ export class HealthManager
         if (character?.health) { return character.health; }
         else
         {
-            let maxHP: number = this.__calculateMaxHP(character);
+            let maxHP: number = Number(this.__calculateMaxHP(character));
+            if (isNaN(maxHP)) { maxHP = 0; }
             character.health = new Health(maxHP);
         }
     }
@@ -152,11 +153,11 @@ export class HealthManager
         for (let characterClass of character.classes)
         {
             let isPrimaryClass: boolean = false;
-            let classLevel: number = characterClass.classlevel;
-            let hitDie: number = characterClass.hitdicevalue;
+            let classLevel: number = Number(characterClass.classlevel);
+            let hitDie: number = Number(characterClass.hitdicevalue);
 
             // If there's no class level or no hit die, they shouldn't get any health from this class
-            if (!classLevel || !hitDie) { return; }
+            if (isNaN(classLevel) || isNaN(hitDie)) { continue; }
 
             // First level of first class gets maximum hit die + con mod
             if (calculatedMaxHP === 0)
