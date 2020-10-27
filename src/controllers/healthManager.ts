@@ -87,7 +87,7 @@ export class HealthManager
      */
     public HealCharacter(character: Character, healAmnt: number)
     {
-        if (!character?.health?.hitpoints || !character.health.maxhp)
+        if (!character?.health)
         {
             console.log("ERROR: Could not heal character e due to incorrect character formatting.")
             return;
@@ -111,7 +111,7 @@ export class HealthManager
      */
     public GiveCharacterTempHP(character: Character, tempHP: number)
     {
-        if (!character?.health?.temphp)
+        if (!character?.health)
         {
             console.log("ERROR: Could not assign temporary hitpoints due to incorrect character formatting.")
             return;
