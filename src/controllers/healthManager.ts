@@ -30,7 +30,7 @@ export class HealthManager
      */
     public DamageCharacter(character: Character, dmgType: EDamageType, dmgAmnt: number): void
     {
-        if (!character?.health || !character.defenses)
+        if (!character?.health)
         {
             console.log("ERROR: Could not calculate damage due to incorrect character formatting.")
             return;
@@ -38,24 +38,26 @@ export class HealthManager
 
         // In the future, this can easily be updated to also look for any 'defenses' attached to an item the character is holding
         // Can also be updated to consider "weaknesses" as well as defenses
-
-        let immunities: Defense[] = character.defenses.filter(def => (def.type == dmgType) && (def.defense == EDefenseType.Immunity));
-        if (immunities.length > 0)
-        {
-            // If the player has any immunities to this damage type, they take no damage. No need to change anything.
-            this.__logDamage(character, dmgAmnt, dmgType, EDefenseType.Immunity)
-            return;
-        }
-
         let isResistant: boolean;
         let rawDmg: number = dmgAmnt;
-        let resistances: Defense[] = character.defenses.filter(def => (def.type == dmgType) && (def.defense == EDefenseType.Resistance));
-        if (resistances.length > 0)
+        if (character.defenses)
         {
-            dmgAmnt = Math.floor(dmgAmnt / 2);
-            isResistant = true;
-        }
+            let immunities: Defense[] = character.defenses.filter(def => (def.type == dmgType) && (def.defense == EDefenseType.Immunity));
+            if (immunities.length > 0)
+            {
+                // If the player has any immunities to this damage type, they take no damage. No need to change anything.
+                this.__logDamage(character, dmgAmnt, dmgType, EDefenseType.Immunity)
+                return;
+            }
 
+            let resistances: Defense[] = character.defenses.filter(def => (def.type == dmgType) && (def.defense == EDefenseType.Resistance));
+            if (resistances.length > 0)
+            {
+                dmgAmnt = Math.floor(dmgAmnt / 2);
+                isResistant = true;
+            }
+
+        }
         // Temp HP acts like a "shield" to damage. Reduce tempHP before normal HP
         if (!character.health.temphp) { character.health.temphp = 0; }
 
