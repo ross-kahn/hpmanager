@@ -59,7 +59,7 @@ export class HealthManager
         // Temp HP acts like a "shield" to damage. Reduce tempHP before normal HP
         if (!character.health.temphp) { character.health.temphp = 0; }
 
-        let tempHP: number = character.health.temphp;
+        let tempHP: number = Number(character.health.temphp);
         let diff: number = Math.abs(tempHP - dmgAmnt);
 
         if (dmgAmnt >= tempHP)
@@ -87,10 +87,14 @@ export class HealthManager
      */
     public HealCharacter(character: Character, healAmnt: number)
     {
-        if (!character?.health) { return; }
+        if (!character?.health?.hitpoints || !character.health.maxhp)
+        {
+            console.log("ERROR: Could not heal character e due to incorrect character formatting.")
+            return;
+        }
 
-        let curHP: number = character.health.hitpoints;
-        let maxHP: number = character.health.maxhp;
+        let curHP: number = Number(character.health.hitpoints);
+        let maxHP: number = Number(character.health.maxhp);
 
         curHP += healAmnt;
         if (curHP > maxHP) { curHP = maxHP; }   // Don't add past maximum
@@ -107,9 +111,13 @@ export class HealthManager
      */
     public GiveCharacterTempHP(character: Character, tempHP: number)
     {
-        if (!character?.health) { return; }
+        if (!character?.health?.temphp)
+        {
+            console.log("ERROR: Could not assign temporary hitpoints due to incorrect character formatting.")
+            return;
+        }
 
-        let curTempHP: number = character.health.temphp;
+        let curTempHP: number = Number(character.health.temphp);
         let replaced: boolean = false;
         if (tempHP > curTempHP)
         {
@@ -174,6 +182,7 @@ export class HealthManager
     {
         if (!character?.stats || !(ability in character.stats))
         {
+            console.log("ERROR: Could not calculate ability score due to incorrect character formatting.")
             return 0;   // You're gonna have a real bad ability score if the character isn't formatted correctly
         }
 

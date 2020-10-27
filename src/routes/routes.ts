@@ -99,7 +99,7 @@ export class Routes
 
             let character: Character = req.characterObj;
             characterController.DamageCharacter(character, req.damageType, req.healthAmount);
-            return res.status(200).send(character);
+            return res.status(200).send(character.health);
         });
 
         /**
@@ -116,7 +116,7 @@ export class Routes
 
             let character: Character = req.characterObj;
             characterController.HealCharacter(character, req.healthAmount);
-            return res.status(200).send(character);
+            return res.status(200).send(character.health);
         });
 
 
@@ -134,7 +134,7 @@ export class Routes
 
             let character: Character = req.characterObj;
             characterController.GiveTempHP(character, req.healthAmount);
-            return res.status(200).send(character);
+            return res.status(200).send(character.health);
         });
 
 
